@@ -9,10 +9,10 @@
 #define NUM_FILAS 3
 #define NUM_TCB_CRIADOS 30
 
+FILA2 filas[NUM_FILAS];
+int terminados = 0;
+
 int main (int argc, char** argv) {
-
-    FILA2 filas[NUM_FILAS];
-
     int i;
     for(i = 0; i < NUM_FILAS;i++) {
         int criou = CreateFila2(&filas[i]);
@@ -22,8 +22,6 @@ int main (int argc, char** argv) {
         }
 
     } 
-    
-    
 
     return 0;
 }
@@ -33,4 +31,38 @@ int sorteia() {
 }
 TCB_t* criaTCB(){
     return malloc(sizeof(TCB_t));
+}
+void printMensagem(int iteracao, int resto) {
+    const char* explicacao;
+    switch(resto) {
+        case 0:
+        case 6:
+            explicacao = "Criação de elemento TCB";
+            break;
+        case 1:
+        case 7:
+            explicacao = "Colocando apto em execução";
+            break;
+        case 2:
+        case 8:
+            explicacao = "Término de execução de thread";
+            break;
+        case 3:
+        case 9:
+            explicacao = "Mover de executando para bloqueado";
+            break;
+        case 4:
+        case 10:
+            explicacao = "Mover de executando para apto (yield)";
+            break;    
+        case 5:
+        case 11:
+            explicacao = "Mover de bloqueado para apto";
+            break;
+    }
+    printf("Iteração %d\tResto: %d\t Ação: %s\n", iteracao, resto, explicacao);
+    printf("\tElementos em apto: %d", 0);
+    printf("\tElementos em executando: %d", 0);
+    printf("\tElementos em bloqueado: %d",0);
+    printf("\tElementos terminados: %d",0);
 }
