@@ -19,7 +19,7 @@ SRC_DIR=./src
 all: main
 
 main: 
-	$(CC) -o $(BIN_DIR)/main $(SRC_DIR)/main.c $(BIN_DIR)/support.o
+	$(CC) -o $(BIN_DIR)/main $(SRC_DIR)/main.c $(BIN_DIR)/support.o -Wall
 
 clean:
 	rm -rf $(LIB_DIR)/*.a $(BIN_DIR)/main 

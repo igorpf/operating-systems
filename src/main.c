@@ -1,3 +1,8 @@
+/*
+Christian Schmitz - 242258
+Igor Pires Ferreira - 242267
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "../include/support.h"
@@ -76,12 +81,12 @@ void printMensagem(int iteracao, int resto) {
             explicacao = "Mover de bloqueado para apto";
             break;
     }
-    printf("Criados: %d\n", criados);
-    printf("Iteracao %d\tResto: %d\t Acao: %s\n", iteracao, resto, explicacao);
-    printf("\tElementos em apto: %d", tamanhoFila(&filas[APTO]));
-    printf("\tElementos em executando: %d", tamanhoFila(&filas[EXECUTANDO]));
-    printf("\tElementos em bloqueado: %d",tamanhoFila(&filas[BLOQUEADO]));
-    printf("\tElementos terminados: %d\n", terminados);
+    // printf("Criados: %d\n", criados);
+    printf("Iteracao: %d\tResto: %d\t Acao: %s", iteracao, resto, explicacao);
+    printf("\n\tElementos em apto: %d", tamanhoFila(&filas[APTO]));
+    printf("\n\tElementos em executando: %d", tamanhoFila(&filas[EXECUTANDO]));
+    printf("\n\tElementos em bloqueado: %d",tamanhoFila(&filas[BLOQUEADO]));
+    printf("\n\tElementos terminados: %d\n\n", terminados);
 }
 
 void realizaAcao(int resto) {
