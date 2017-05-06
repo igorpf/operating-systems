@@ -18,8 +18,10 @@ SRC_DIR=./src
 
 all: main
 
+#main: 
+#	$(CC) -o $(BIN_DIR)/main $(SRC_DIR)/main.c $(BIN_DIR)/support.o -Wall
 main: 
-	$(CC) -o $(BIN_DIR)/main $(SRC_DIR)/main.c $(BIN_DIR)/support.o -Wall
+	$(CC) -o $(BIN_DIR)/main $(SRC_DIR)/main2.c $(BIN_DIR)/support.o -Wall
 
 clean:
 	rm -rf $(LIB_DIR)/*.a $(BIN_DIR)/main 
