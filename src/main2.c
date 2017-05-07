@@ -14,7 +14,11 @@ Igor Pires Ferreira - 242267
 #define NUM_FIBONACCI 12
 #define NUM_TRIANGULO 6
 
+#define TEM_THREAD_NA_FILA 0
+#define NAO_TEM_THREAD_NA_FILA 1
+
 FILA2 fila;
+ucontext_t mainContext;
 
 void PA() {
     int i, r = 4, n = 0;
@@ -79,6 +83,38 @@ TCB_t* criaTCBfuncTriang(){
     return novoTCB;
 }
 
+int tamanhoFila(FILA2 *fila) {
+    int resultado = FirstFila2(fila);
+    int tamanho = 0, continua = 1;
+    if (resultado == 0)
+        tamanho++;
+    else
+        continua = 0;
+    while(continua) {
+        resultado = NextFila2(fila);
+        if(resultado==0)
+            tamanho++;
+        else 
+            continua = 0;
+    } 
+    return tamanho;
+}
+
+void cedeuCPU(){
+
+    TCB_t* TCBdaThreadNaCPU = (TCB_t *) GetAtIteratorFila2(&fila);
+    getcontext(&(TCBdaThreadNaCPU->context));  
+    DeleteAtIteratorFila2(&fila);
+    AppendFila2(&fila, (void *) TCBdaThreadNaCPU);
+    TCB_t* TCBdaNovaThreadNaCPU = (TCB_t *) GetAtIteratorFila2(&fila);
+    setcontext(&(TCBdaNovaThreadNaCPU->context));
+
+    //minha ideia era fazer essa func aqui pra rodar a cada iteracao das funcs matem'aticas, e ao final de cada uma,
+    //elas chamarem um fimExecthread que retira a thread da fila e seta o contexto pra main se for a ultima 
+    //thread ainda em exec
+    
+}
+
 int main (int argc, char** argv) {
     // fibonacci();
     // triangulo();
@@ -93,6 +129,9 @@ int main (int argc, char** argv) {
     AppendFila2(&fila, (void *) criaTCBfuncPG());
     AppendFila2(&fila, (void *) criaTCBfuncFib());
     AppendFila2(&fila, (void *) criaTCBfuncTriang());
+
+    getcontext(&mainContext);
+    
 
     return 0;
 }
