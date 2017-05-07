@@ -14,6 +14,8 @@ Igor Pires Ferreira - 242267
 #define NUM_FIBONACCI 12
 #define NUM_TRIANGULO 6
 
+FILA2 fila;
+
 void PA() {
     int i, r = 4, n = 0;
     for (i = 1; i <= NUM_PA; ++i) {
@@ -45,9 +47,52 @@ void triangulo() {
     }
 }
 
+TCB_t* criaTCBfuncPA(){ //cria TCB com contexto pra func PA
+    TCB_t* novoTCB = malloc(sizeof(TCB_t));
+    novoTCB->tid = 0;
+    makecontext(&(novoTCB->context), (void*)&PA, 0);
+
+    return novoTCB;
+}
+
+TCB_t* criaTCBfuncPG(){
+    TCB_t* novoTCB = malloc(sizeof(TCB_t));
+    novoTCB->tid = 0;
+    makecontext(&(novoTCB->context), (void*)&PG, 0);
+
+    return novoTCB;
+}
+
+TCB_t* criaTCBfuncFib(){ 
+    TCB_t* novoTCB = malloc(sizeof(TCB_t));
+    novoTCB->tid = 0;
+    makecontext(&(novoTCB->context), (void*)&fibonacci, 0);
+
+    return novoTCB;
+}
+
+TCB_t* criaTCBfuncTriang(){
+    TCB_t* novoTCB = malloc(sizeof(TCB_t));
+    novoTCB->tid = 0;
+    makecontext(&(novoTCB->context), (void*)&triangulo, 0);
+
+    return novoTCB;
+}
 
 int main (int argc, char** argv) {
     // fibonacci();
     // triangulo();
+    
+    int criou = CreateFila2(&fila);
+    if(criou!=0){
+        printf("Erro ao criar a fila \n");      
+        exit(1);
+    }
+
+    AppendFila2(&fila, (void *) criaTCBfuncPA());
+    AppendFila2(&fila, (void *) criaTCBfuncPG());
+    AppendFila2(&fila, (void *) criaTCBfuncFib());
+    AppendFila2(&fila, (void *) criaTCBfuncTriang());
+
     return 0;
 }
