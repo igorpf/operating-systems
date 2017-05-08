@@ -18,70 +18,53 @@ Igor Pires Ferreira - 242267
 #define NAO_TEM_THREAD_NA_FILA 1
 
 FILA2 fila;
-ucontext_t mainContext;
+char pilhas[4][SIGSTKSZ];
+ucontext_t mainContext, mainContext2;
 
-void PA() {
+void PA(ucontext_t* this, ucontext_t *next) {
+    printf("PA ");
     int i, r = 4, n = 0;
     for (i = 1; i <= NUM_PA; ++i) {
         n+=r;
+        printf("i: %d n: %d\n", i, n);
+        swapcontext(this, next);
+        printf("HAY\n");
+        // setcontext(next);
     }
 }
-void PG() {
+void PG(ucontext_t* this, ucontext_t *next) {
+    printf("PG ");
     int i, r = 2, n = 1;
     for (i = 1; i <= NUM_PG; ++i) {
         n*=r;
+        printf("i: %d n: %d\n", i, n);
+        swapcontext(this, next);
     }
 }
-void fibonacci() {
+void fibonacci(ucontext_t* this, ucontext_t *next) {
     int f, f0 = 1, f1 = 1, i;
-
+printf("fib  ");
     for (i = 2; i <= NUM_FIBONACCI; ++i)    {       
         f = f0 + f1;
         f0 = f1;
         f1 = f; 
+        printf("i: %d f: %d\n", i, f);
+        swapcontext(this, next);
         // printf("i: %d, f: %d\n", i, f);
     }
 }
-void triangulo() {
+void triangulo(ucontext_t* this, ucontext_t *next) {
     int t = 0, i;
-
+printf("tri ");
     for (i = 1; i <= NUM_TRIANGULO; i++) {      
         t += (i-1);
+        printf("i: %d t: %d\n", i, t);
+        swapcontext(this, next);
         // printf("i: %d, t: %d\n", i, t);
     }
 }
 
-TCB_t* criaTCBfuncPA(){ //cria TCB com contexto pra func PA
-    TCB_t* novoTCB = malloc(sizeof(TCB_t));
-    novoTCB->tid = 0;
-    makecontext(&(novoTCB->context), (void*)&PA, 0);
 
-    return novoTCB;
-}
-
-TCB_t* criaTCBfuncPG(){
-    TCB_t* novoTCB = malloc(sizeof(TCB_t));
-    novoTCB->tid = 0;
-    makecontext(&(novoTCB->context), (void*)&PG, 0);
-
-    return novoTCB;
-}
-
-TCB_t* criaTCBfuncFib(){ 
-    TCB_t* novoTCB = malloc(sizeof(TCB_t));
-    novoTCB->tid = 0;
-    makecontext(&(novoTCB->context), (void*)&fibonacci, 0);
-
-    return novoTCB;
-}
-
-TCB_t* criaTCBfuncTriang(){
-    TCB_t* novoTCB = malloc(sizeof(TCB_t));
-    novoTCB->tid = 0;
-    makecontext(&(novoTCB->context), (void*)&triangulo, 0);
-
-    return novoTCB;
-}
 
 int tamanhoFila(FILA2 *fila) {
     int resultado = FirstFila2(fila);
@@ -116,22 +99,48 @@ void cedeuCPU(){
 }
 
 int main (int argc, char** argv) {
-    // fibonacci();
-    // triangulo();
+    void* funcs[4] = {PA, PG, fibonacci, triangulo}; 
+    
     
     int criou = CreateFila2(&fila);
     if(criou!=0){
         printf("Erro ao criar a fila \n");      
         exit(1);
     }
-
-    AppendFila2(&fila, (void *) criaTCBfuncPA());
-    AppendFila2(&fila, (void *) criaTCBfuncPG());
-    AppendFila2(&fila, (void *) criaTCBfuncFib());
-    AppendFila2(&fila, (void *) criaTCBfuncTriang());
-
-    getcontext(&mainContext);
     
+    
+
+    int i;
+    for(i = 0 ; i < 4; i++) {        
+        ucontext_t context;
+        getcontext(&context);
+        context.uc_stack.ss_sp = pilhas[i];
+        context.uc_stack.ss_size = sizeof(pilhas[i]);
+        context.uc_link =  &mainContext;
+        makecontext(&context, (void (*)(void))funcs[i], 2, &context, &mainContext);
+
+        TCB_t* novoTCB = malloc(sizeof(TCB_t));
+        novoTCB->tid = i;
+        novoTCB->context = context;
+        AppendFila2(&fila, (void *) novoTCB);
+    }
+
+    
+    //dispatcher    
+    while(tamanhoFila(&fila)) {
+        // printf("s ");
+        TCB_t* tcb; 
+        getcontext(&mainContext);
+        if(!FirstFila2(&fila)) {
+            tcb = GetAtIteratorFila2(&fila);
+            DeleteAtIteratorFila2(&fila);
+            AppendFila2(&fila, (void *) tcb);
+            printf("tcb: %d ", tcb->tid);
+            swapcontext(&mainContext2, &tcb->context);            
+            // printf("s2 ");
+        }
+
+    }
 
     return 0;
 }
