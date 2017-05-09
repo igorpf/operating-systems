@@ -23,50 +23,57 @@ Igor Pires Ferreira - 242267
 FILA2 executionQueue;
 ucontext_t mainContext, contextDispatcher, contextClear;
 TCB_t* currentTCB;
+int a = 0, b = 0, f = 0, t = 0, ia, ib, ifi, it;
 
 void yield() {
     AppendFila2(&executionQueue, (void *) currentTCB);
     swapcontext(&currentTCB->context, &contextDispatcher);
 }
 
+void printResults() {
+    printf("----------------------------\n" );
+    printf("PA termo   %d  : %d\n", ia, a);
+    printf("PG termo   %d  : %d\n", ib, b);
+    printf("Fibo termo %d  : %d\n", ifi, f);
+    printf("Tri termo  %d  : %d\n", it, t);
+}
+
 void PA() {
-    int i, r = 4, n = 0;
-    for (i = 1; i <= NUM_PA; ++i) {
-        printf("PA ");
-        n+=r;
-        printf("i: %d n: %d", i, n);
+    int r = 4;
+    for (ia = 1; ia <= NUM_PA; ++ia) {
+        // printf("PA ");
+        a+=r;
+        // printf("i: %d n: %d", i, n);
         yield();
-        // swapcontext(&currentTCB->context, &contextDispatcher);
     }
 }
 void PG() {
-    int i, r = 2, n = 1;
-    for (i = 1; i <= NUM_PG; ++i) {
-        printf("PG ");
-        n*=r;
-        printf("i: %d n: %d", i, n);
+    int  r = 2;
+    for (ib = 1; ib <= NUM_PG; ++ib) {
+        // printf("PG ");
+        b*=r;
+        // printf("i: %d n: %d", i, n);
         yield();
         // swapcontext(&currentTCB->context, &contextDispatcher);
     }
 }
 void fibonacci() {
-    int f, f0 = 1, f1 = 1, i;
-    for (i = 2; i <= NUM_FIBONACCI; ++i)    {       
-        printf("fib  ");
+    int f0 = 1, f1 = 1;
+    for (ifi = 2; ifi <= NUM_FIBONACCI; ++ifi)    {       
+        // printf("fib  ");
         f = f0 + f1;
         f0 = f1;
         f1 = f; 
-        printf("i: %d f: %d", i, f);
+        // printf("i: %d f: %d", i, f);
         yield();
         //swapcontext(&currentTCB->context, &contextDispatcher);
     }
 }
 void triangulo() {
-    int t = 0, i;
-    for (i = 1; i <= NUM_TRIANGULO; i++) {      
-        printf("tri ");
-        t += (i-1);
-        printf("i: %d t: %d", i, t);
+    for (it = 1; it <= NUM_TRIANGULO; it++) {      
+        // printf("tri ");
+        t += (it-1);
+        // printf("i: %d t: %d", i, t);
         yield();
         // swapcontext(&currentTCB->context, &contextDispatcher);
     }
@@ -86,11 +93,13 @@ void dispatch(){
     if(!FirstFila2(&executionQueue)) {
         currentTCB = GetAtIteratorFila2(&executionQueue);
         DeleteAtIteratorFila2(&executionQueue);        
-        printf("\ntcb: %d ", currentTCB->tid);
+        // printf("\ntcb: %d ", currentTCB->tid);
+        printResults();
         setcontext(&currentTCB->context);
     }
     
 }
+
 
 int main (int argc, char** argv) {
     void* funcs[4] = {PA, PG, fibonacci, triangulo}; 
@@ -133,6 +142,7 @@ int main (int argc, char** argv) {
         ret_code = 0;
         setcontext(&contextDispatcher);
     }    
+    printResults();
     printf("\nsaiu da main\n");
     return 0;
 }
