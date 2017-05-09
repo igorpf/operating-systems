@@ -14,13 +14,15 @@ Igor Pires Ferreira - 242267
 #define NUM_FIBONACCI 12
 #define NUM_TRIANGULO 6
 
-#define TEM_THREAD_NA_FILA 0
-#define NAO_TEM_THREAD_NA_FILA 1
+#define THREAD_APTO 0
+#define THREAD_EXEC 1
+#define THREAD_BLOQ 2
+#define THREAD_TERM 3
 #define stackLength SIGSTKSZ
 
 FILA2 fila;
 char pilha[stackLength];
-ucontext_t mainContext, contextDispatcher;
+ucontext_t mainContext, contextDispatcher, contextClear;
 TCB_t* currentTCB;
 
 void PA() {
@@ -28,7 +30,7 @@ void PA() {
     for (i = 1; i <= NUM_PA; ++i) {
         printf("PA ");
         n+=r;
-        printf("i: %d n: %d\n", i, n);
+        printf("i: %d n: %d", i, n);
         swapcontext(&currentTCB->context, &contextDispatcher);
     }
 }
@@ -37,7 +39,7 @@ void PG() {
     for (i = 1; i <= NUM_PG; ++i) {
         printf("PG ");
         n*=r;
-        printf("i: %d n: %d\n", i, n);
+        printf("i: %d n: %d", i, n);
         swapcontext(&currentTCB->context, &contextDispatcher);
     }
 }
@@ -48,7 +50,7 @@ void fibonacci() {
         f = f0 + f1;
         f0 = f1;
         f1 = f; 
-        printf("i: %d f: %d\n", i, f);
+        printf("i: %d f: %d", i, f);
         swapcontext(&currentTCB->context, &contextDispatcher);
     }
 }
@@ -57,7 +59,7 @@ void triangulo() {
     for (i = 1; i <= NUM_TRIANGULO; i++) {      
         printf("tri ");
         t += (i-1);
-        printf("i: %d t: %d\n", i, t);
+        printf("i: %d t: %d", i, t);
         swapcontext(&currentTCB->context, &contextDispatcher);
     }
 }
@@ -78,10 +80,21 @@ int tamanhoFila(FILA2 *fila) {
     } 
     return tamanho;
 }
+
 void clear() {
-    free(currentTCB->context.uc_stack.ss_sp);
-    free(currentTCB);
-    currentTCB = NULL;
+    if(!FirstFila2(&fila)) {
+        do {
+            TCB_t* deleted = GetAtIteratorFila2(&fila);
+            if(deleted->tid == currentTCB->tid) {
+                DeleteAtIteratorFila2(&fila);
+                free(deleted->context.uc_stack.ss_sp);
+                free(deleted);
+                currentTCB = NULL;
+                break;
+            }
+        } while(NextFila2(&fila)==0);
+        
+    }
 }
 void terminate() {
     clear();
@@ -92,7 +105,7 @@ void dispatch(){
         currentTCB = GetAtIteratorFila2(&fila);
         DeleteAtIteratorFila2(&fila);
         AppendFila2(&fila, (void *) currentTCB);
-        printf("tcb: %d ", currentTCB->tid);
+        printf("\ntcb: %d ", currentTCB->tid);
         setcontext(&currentTCB->context);
     }
     
@@ -116,7 +129,7 @@ int main (int argc, char** argv) {
         getcontext(&context);
         context.uc_stack.ss_sp = (char *) malloc(stackLength);
         context.uc_stack.ss_size = stackLength;
-        context.uc_link =  &mainContext;
+        context.uc_link =  &contextClear;
         makecontext(&context, (void (*)(void))funcs[i],0);
 
         TCB_t* novoTCB = malloc(sizeof(TCB_t));
@@ -130,32 +143,20 @@ int main (int argc, char** argv) {
     getcontext(&contextDispatcher);
     contextDispatcher.uc_stack.ss_sp = (char *) malloc(stackLength);     
     contextDispatcher.uc_stack.ss_size = stackLength;
-    contextDispatcher.uc_link = 0;
-    makecontext(&contextDispatcher, (void (*)(void))dispatch, 0);     
+    contextDispatcher.uc_link = &mainContext;
+    makecontext(&contextDispatcher, (void (*)(void))dispatch, 0);    
+
+    getcontext(&contextClear);
+    contextClear.uc_stack.ss_sp = (char *) malloc(stackLength);     
+    contextClear.uc_stack.ss_size = stackLength;
+    contextClear.uc_link = 0;
+    makecontext(&contextClear, (void (*)(void))terminate, 0);    
+
     getcontext(&mainContext);
     if(ret_code){        
         ret_code = 0;
         setcontext(&contextDispatcher);
-    }
-    
-
-    // printf("hay\n");
-    // if(ret_code) {
-    //     ret_code = 0;
-    //     while(tamanhoFila(&fila)) {
-    //         TCB_t* tcb; 
-    //         if(!FirstFila2(&fila)) {
-    //             tcb = GetAtIteratorFila2(&fila);
-    //             DeleteAtIteratorFila2(&fila);
-    //             printf("tcb: %d ", tcb->tid);
-    //             swapcontext(&mainContext,&tcb->context);            
-    //             AppendFila2(&fila, (void *) tcb);
-    //             printf("s2 ");
-    //         }
-
-    //     }    
-    // }
-    
-
+    }    
+    printf("\nsaiu da main\n");
     return 0;
 }
