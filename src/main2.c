@@ -20,10 +20,14 @@ Igor Pires Ferreira - 242267
 #define THREAD_TERM 3
 #define stackLength SIGSTKSZ
 
-FILA2 fila;
-char pilha[stackLength];
+FILA2 executionQueue;
 ucontext_t mainContext, contextDispatcher, contextClear;
 TCB_t* currentTCB;
+
+void yield() {
+    AppendFila2(&executionQueue, (void *) currentTCB);
+    swapcontext(&currentTCB->context, &contextDispatcher);
+}
 
 void PA() {
     int i, r = 4, n = 0;
@@ -31,7 +35,8 @@ void PA() {
         printf("PA ");
         n+=r;
         printf("i: %d n: %d", i, n);
-        swapcontext(&currentTCB->context, &contextDispatcher);
+        yield();
+        // swapcontext(&currentTCB->context, &contextDispatcher);
     }
 }
 void PG() {
@@ -40,7 +45,8 @@ void PG() {
         printf("PG ");
         n*=r;
         printf("i: %d n: %d", i, n);
-        swapcontext(&currentTCB->context, &contextDispatcher);
+        yield();
+        // swapcontext(&currentTCB->context, &contextDispatcher);
     }
 }
 void fibonacci() {
@@ -51,7 +57,8 @@ void fibonacci() {
         f0 = f1;
         f1 = f; 
         printf("i: %d f: %d", i, f);
-        swapcontext(&currentTCB->context, &contextDispatcher);
+        yield();
+        //swapcontext(&currentTCB->context, &contextDispatcher);
     }
 }
 void triangulo() {
@@ -60,51 +67,25 @@ void triangulo() {
         printf("tri ");
         t += (i-1);
         printf("i: %d t: %d", i, t);
-        swapcontext(&currentTCB->context, &contextDispatcher);
+        yield();
+        // swapcontext(&currentTCB->context, &contextDispatcher);
     }
 }
 
-int tamanhoFila(FILA2 *fila) {
-    int resultado = FirstFila2(fila);
-    int tamanho = 0, continua = 1;
-    if (resultado == 0)
-        tamanho++;
-    else
-        continua = 0;
-    while(continua) {
-        resultado = NextFila2(fila);
-        if(resultado==0)
-            tamanho++;
-        else 
-            continua = 0;
-    } 
-    return tamanho;
-}
 
 void clear() {
-    if(!FirstFila2(&fila)) {
-        do {
-            TCB_t* deleted = GetAtIteratorFila2(&fila);
-            if(deleted->tid == currentTCB->tid) {
-                DeleteAtIteratorFila2(&fila);
-                free(deleted->context.uc_stack.ss_sp);
-                free(deleted);
-                currentTCB = NULL;
-                break;
-            }
-        } while(NextFila2(&fila)==0);
-        
-    }
+    free(currentTCB->context.uc_stack.ss_sp);
+    free(currentTCB);
+    currentTCB = NULL;
 }
 void terminate() {
     clear();
     setcontext(&contextDispatcher);
 }
 void dispatch(){
-    if(!FirstFila2(&fila)) {
-        currentTCB = GetAtIteratorFila2(&fila);
-        DeleteAtIteratorFila2(&fila);
-        AppendFila2(&fila, (void *) currentTCB);
+    if(!FirstFila2(&executionQueue)) {
+        currentTCB = GetAtIteratorFila2(&executionQueue);
+        DeleteAtIteratorFila2(&executionQueue);        
         printf("\ntcb: %d ", currentTCB->tid);
         setcontext(&currentTCB->context);
     }
@@ -113,16 +94,11 @@ void dispatch(){
 
 int main (int argc, char** argv) {
     void* funcs[4] = {PA, PG, fibonacci, triangulo}; 
-    
-    
-    int criou = CreateFila2(&fila), ret_code = 1;
+    int criou = CreateFila2(&executionQueue), ret_code = 1;
     if(criou!=0){
         printf("Erro ao criar a fila \n");      
         exit(1);
     }
-    
-    
-
     int i;
     for(i = 0 ; i < 4; i++) {        
         ucontext_t context;
@@ -135,7 +111,7 @@ int main (int argc, char** argv) {
         TCB_t* novoTCB = malloc(sizeof(TCB_t));
         novoTCB->tid = i;
         novoTCB->context = context;
-        AppendFila2(&fila, (void *) novoTCB);
+        AppendFila2(&executionQueue, (void *) novoTCB);
     }
 
     
