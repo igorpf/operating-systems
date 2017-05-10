@@ -95,7 +95,7 @@ int ccreate (void* (*start)(void*), void *arg, int prio) {
         newTCB->tid = generateId();
         newTCB->state = THREAD_RDY;
         newTCB->context = context;
-        newTCB->prio = prio;
+        newTCB->ticket = prio;
         AppendFila2(&readyQueue[prio], (void *) newTCB);
         if(context.uc_stack.ss_sp && newTCB) //check if memory was correctly allocated
             return newTCB->tid;
@@ -137,7 +137,7 @@ int csetprio(int tid, int prio) {
 int cyield(void) {
     if (CPU) {
         CPU->state = THREAD_RDY;
-        AppendFila2(&readyQueue[CPU->prio], (void *) CPU);
+        AppendFila2(&readyQueue[CPU->ticket], (void *) CPU);
         swapcontext(&CPU->context, &contextDispatcher); 
         return 0;
     }
