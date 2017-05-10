@@ -21,6 +21,7 @@ typedef struct s_TCB {
 	int		state;		// estado em que a thread se encontra
 					// 0: Criação; 1: Apto; 2: Execução; 3: Bloqueado e 4: Término
 	int 		ticket;		// "bilhete" de loteria da thread, para uso do escalonador
+	int 	prio;
 	ucontext_t 	context;	// contexto de execução da thread (SP, PC, GPRs e recursos) 
 } TCB_t; 
 

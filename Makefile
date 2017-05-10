@@ -12,18 +12,19 @@
 
 CC=gcc
 LIB_DIR=./lib
+TEST_DIR=./testes
 INC_DIR=./include
 BIN_DIR=./bin
 SRC_DIR=./src
+CFLAGS = -Wall
 
 all: main
 
-#main: 
-#	$(CC) -o $(BIN_DIR)/main $(SRC_DIR)/main.c $(BIN_DIR)/support.o -Wall
-main: 
-	$(CC) -o $(BIN_DIR)/main $(SRC_DIR)/main2.c $(BIN_DIR)/support.o -Wall
+main: cthread.o
+	$(CC)  $(CFLAGS) -o $(BIN_DIR)/main $(BIN_DIR)/*.o
+cthread.o: 
+	$(CC) $(CFLAGS) -c $(SRC_DIR)/cthread.c -Wall -o $(BIN_DIR)/cthread.o
 
 clean:
-	rm -rf $(LIB_DIR)/*.a $(BIN_DIR)/main 
-
+	find $(BIN_DIR) $(LIB_DIR) $(TEST_DIR) -type f ! -name 'support.o' ! -name '*.c' ! -name 'Makefile' -delete
 
