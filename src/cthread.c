@@ -5,6 +5,7 @@ Igor Pires Ferreira - 242267
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ucontext.h>
 #include "../include/support.h"
 #include "../include/cdata.h"
@@ -26,7 +27,7 @@ FILA2 readyQueue[READY_QUEUES], blockedQueue //TCB_t queues
         ,joinQueue; // JOIN queues
 ucontext_t mainContext, contextDispatcher, contextClear;
 TCB_t* CPU;
-int tid=1;
+int tid=1, initializedDeps = 0;
 
 //Auxiliary functions
 //---------------------------------------------------
@@ -68,7 +69,7 @@ void initTerminator() {
 }
 
 int initQueues() {
-    int success = !CreateFila2(&blockedQueue), i;
+    int success = !CreateFila2(&blockedQueue) && !CreateFila2(&joinQueue), i;
     for(i = 0 ; i < READY_QUEUES; i++)
         success = success && !CreateFila2(&readyQueue[0]);
     return success;
@@ -79,10 +80,47 @@ void init() {
     initTerminator();
     initDispatcher();
 }
+int searchTCBQueue(FILA2* queue, int tid) {
+    TCB_t *ptr;
+    if(!FirstFila2(queue)) {
+        ptr = GetAtIteratorFila2(queue);
+        if(tid == ptr->tid) {
+            return SUCCESS;
+        } else {
+            while(!NextFila2(queue)) {
+                if(tid == ptr->tid) {
+                    return SUCCESS;
+                }
+            }
+        }
+    }    
+    return ERROR;
+}
+int searchJoinQueue(FILA2* queue, int tid) {
+    JOIN *ptr;
+    if(!FirstFila2(queue)) {
+        ptr = GetAtIteratorFila2(queue);
+        if(tid == ptr->waitedTid) {
+            return SUCCESS;
+        } else {
+            while(!NextFila2(queue)) {
+                if(tid == ptr->waitedTid) {
+                    return SUCCESS;
+                }
+            }
+        }
+    }    
+    return ERROR;
+}
 
 //Cthread
 //------------------------------------------------------
 int ccreate (void* (*start)(void*), void *arg, int prio) {
+    if(!initializedDeps) {        
+        init();
+        initializedDeps = 1;
+    }
+
     if(prio>=0 || prio<=3) {
         ucontext_t context;
         getcontext(&context);
@@ -135,6 +173,11 @@ int csetprio(int tid, int prio) {
 }
 
 int cyield(void) {
+    if(!initializedDeps) {        
+        init();
+        initializedDeps = 1;
+    }
+
     if (CPU) {
         CPU->state = THREAD_RDY;
         AppendFila2(&readyQueue[CPU->ticket], (void *) CPU);
@@ -145,11 +188,100 @@ int cyield(void) {
 }
 
 int cjoin(int tid) {
+    // First, check if the thread exists
+    int i, found = 0;
+    if(searchTCBQueue(&blockedQueue, tid) == ERROR) {        
+        for(i = 0; i < READY_QUEUES; i++) {            
+            if(searchTCBQueue(&readyQueue[i], tid) == SUCCESS) {
+                found = 1;
+                break;
+            }
+        }
+        if(!found)
+            return ERROR;
+    }
+    //Then, check if the thread isn't being waited for
+    if (searchJoinQueue(&joinQueue,tid) == SUCCESS)
+        return ERROR;
+    //Block the current thread and send it to the joinQueue
+    if (CPU) {
+        CPU->state = THREAD_BLOC;
+        JOIN *newJoinPair = (JOIN *) malloc(sizeof(JOIN));
+        newJoinPair->waitedTid = tid;
+        newJoinPair->waitingTid = CPU->tid;
+        if(!AppendFila2(&blockedQueue, (void *) CPU) && !AppendFila2(&joinQueue, (void *) newJoinPair)) {            
+            swapcontext(&CPU->context, &contextDispatcher); 
+            return 0;    
+        }        
+    }
+    return ERROR;
+}
+int csem_init(csem_t *sem, int count) {
+    if(!initializedDeps) {        
+        init();
+        initializedDeps = 1;
+    }
+    sem = (csem_t *) malloc(sizeof(csem_t));
+    sem->count = count;
+    if(sem && !CreateFila2(sem->fila))
+        return 0;
+    else
+        return ERROR;
+}
+
+int cwait(csem_t *sem) {
+    if(!initializedDeps) {        
+        init();
+        initializedDeps = 1;
+    }
+
+    if(!sem)
+        return ERROR;
+    sem->count--;
+    
+    if(sem->count < 0) {
+        if(!sem->fila && CreateFila2(sem->fila)) 
+            return ERROR;
+        CPU->state = THREAD_BLOC;    
+        if(AppendFila2(&blockedQueue, (void *) CPU) || AppendFila2(sem->fila, (void *) CPU))
+            return ERROR;
+
+        swapcontext(&CPU->context, &contextDispatcher);
+    }
     return 0;
 }
-int csem_init(csem_t *sem, int count);
-int cwait(csem_t *sem);
-int csignal(csem_t *sem);
-int cidentify (char *name, int size);
 
-int main(){return 0;}
+int csignal(csem_t *sem) {
+    if(!initializedDeps) {        
+        init();
+        initializedDeps = 1;
+    }
+    
+    if(!sem)
+        return ERROR;
+    sem->count++;
+    
+    if(sem->count <= 0) {
+        if(!sem->fila && CreateFila2(sem->fila)) 
+            return ERROR;
+        if(!FirstFila2(sem->fila))
+            return ERROR;
+        TCB_t* freed = GetAtIteratorFila2(sem->fila);
+        freed->state = THREAD_RDY;
+        if(searchTCBQueue(&blockedQueue, freed->tid))
+            return ERROR;
+        DeleteAtIteratorFila2(sem->fila);
+        DeleteAtIteratorFila2(&blockedQueue);            
+    }
+    return 0;
+}
+
+int cidentify (char *name, int size) {
+    char* names = "Christian Schmitz 242258\nIgor Pires Ferreira 242267\n";
+    if(strlen(names) > size) 
+        return ERROR;
+    strncat(name, names, size);
+    return 0;
+}
+
+// int main(){char name[100];cidentify(name, 100); return 0;}
