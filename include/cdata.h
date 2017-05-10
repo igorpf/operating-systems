@@ -25,4 +25,9 @@ typedef struct s_TCB {
 	ucontext_t 	context;	// contexto de execução da thread (SP, PC, GPRs e recursos) 
 } TCB_t; 
 
+typedef struct join {
+	int waitedTid;    //thread that is waiting
+	int waitingTid;	  //thread which is being waited
+} JOIN;
+
 #endif

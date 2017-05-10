@@ -22,7 +22,8 @@ Igor Pires Ferreira - 242267
 #define ERROR -1
 
 #define READY_QUEUES 4
-FILA2 readyQueue[READY_QUEUES], blockedQueue, joinQueue;
+FILA2 readyQueue[READY_QUEUES], blockedQueue //TCB_t queues
+        ,joinQueue; // JOIN queues
 ucontext_t mainContext, contextDispatcher, contextClear;
 TCB_t* CPU;
 int tid=1;
@@ -132,6 +133,7 @@ int csetprio(int tid, int prio) {
     }
     return found? 0:ERROR;
 }
+
 int cyield(void) {
     if (CPU) {
         CPU->state = THREAD_RDY;
@@ -141,7 +143,10 @@ int cyield(void) {
     }
     return ERROR;
 }
-int cjoin(int tid);
+
+int cjoin(int tid) {
+    return 0;
+}
 int csem_init(csem_t *sem, int count);
 int cwait(csem_t *sem);
 int csignal(csem_t *sem);
