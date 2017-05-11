@@ -27,6 +27,7 @@ int main(int argc, char *argv[]) {
 
 	id0 = ccreate(func0, (void *)&i,1);
 	id1 = ccreate(func1, (void *)&i,1);
+	// printf("%d %d\n", id0, id1);
 
 	printf("Eu sou a main após a criação de ID0 e ID1\n");
 

@@ -23,7 +23,7 @@ all: main lib
 main: cthread.o
 	$(CC)  $(CFLAGS) -o $(BIN_DIR)/main $(BIN_DIR)/*.o
 cthread.o: 
-	$(CC) $(CFLAGS) -c $(SRC_DIR)/cthread.c -Wall -o $(BIN_DIR)/cthread.o
+	$(CC) $(CFLAGS) -c $(SRC_DIR)/cthread.c -Wall -o $(BIN_DIR)/cthread.o 
 
 lib: cthread.o
 	ar crs $(LIB_DIR)/libcthread.a $(BIN_DIR)/cthread.o $(BIN_DIR)/support.o

@@ -26,60 +26,11 @@ Igor Pires Ferreira - 242267
 FILA2 readyQueue[READY_QUEUES], blockedQueue //TCB_t queues
         ,joinQueue; // JOIN queues
 ucontext_t mainContext, contextDispatcher, contextClear;
-TCB_t* CPU;
+TCB_t* CPU, *mainThread;
 int tid=1, initializedDeps = 0;
 
 //Auxiliary functions
 //---------------------------------------------------
-int generateId() {
-    return tid++;
-}
-
-void terminate() {
-    //TODO: verify join
-    free(CPU->context.uc_stack.ss_sp);
-    free(CPU);
-    CPU = NULL;
-    setcontext(&contextDispatcher);
-}
-void dispatch(){
-    int i;
-    for(i = 0 ; i < READY_QUEUES; i++) {
-        if(!FirstFila2(&readyQueue[i])) {
-            CPU = GetAtIteratorFila2(&readyQueue[i]);
-            DeleteAtIteratorFila2(&readyQueue[i]);        
-            setcontext(&CPU->context);
-        }
-    }
-}
-void initDispatcher() {
-    getcontext(&contextDispatcher);
-    contextDispatcher.uc_stack.ss_sp = (char *) malloc(stackLength);     
-    contextDispatcher.uc_stack.ss_size = stackLength;
-    contextDispatcher.uc_link = &mainContext;
-    makecontext(&contextDispatcher, (void (*)(void))dispatch, 0);    
-}
-
-void initTerminator() {
-    getcontext(&contextClear);
-    contextClear.uc_stack.ss_sp = (char *) malloc(stackLength);     
-    contextClear.uc_stack.ss_size = stackLength;
-    contextClear.uc_link = 0;
-    makecontext(&contextClear, (void (*)(void))terminate, 0);
-}
-
-int initQueues() {
-    int success = !CreateFila2(&blockedQueue) && !CreateFila2(&joinQueue), i;
-    for(i = 0 ; i < READY_QUEUES; i++)
-        success = success && !CreateFila2(&readyQueue[0]);
-    return success;
-
-}
-void init() {
-    initQueues();
-    initTerminator();
-    initDispatcher();
-}
 int searchTCBQueue(FILA2* queue, int tid) {
     TCB_t *ptr;
     if(!FirstFila2(queue)) {
@@ -100,6 +51,7 @@ int searchJoinQueue(FILA2* queue, int tid) {
     JOIN *ptr;
     if(!FirstFila2(queue)) {
         ptr = GetAtIteratorFila2(queue);
+        printf("\nwaited: %d, waiting: %d\n", ptr->waitedTid, ptr->waitingTid);
         if(tid == ptr->waitedTid) {
             return SUCCESS;
         } else {
@@ -112,8 +64,85 @@ int searchJoinQueue(FILA2* queue, int tid) {
     }    
     return ERROR;
 }
+int verifyJoinedThreads(int waitedTid) {
+    if(searchJoinQueue(&joinQueue, waitedTid) == SUCCESS && searchTCBQueue(&blockedQueue, waitedTid) == SUCCESS) {
+        JOIN* ptr = (JOIN*) GetAtIteratorFila2(&joinQueue);        
+        DeleteAtIteratorFila2(&joinQueue);
+        free(ptr);
+        ptr = NULL;
+        
+        TCB_t* freed = GetAtIteratorFila2(&blockedQueue);
+        freed->state = THREAD_RDY;
+        AppendFila2(&readyQueue[freed->ticket], (void *)freed);    
+        DeleteAtIteratorFila2(&blockedQueue);
+    }
+}
+int generateId() {
+    return tid++;
+}
 
-//Cthread
+void terminate() {
+    //TODO: verify join
+
+    verifyJoinedThreads(CPU->tid);
+    free(CPU->context.uc_stack.ss_sp);
+    free(CPU);
+    CPU = NULL;
+    printf("terminate\n");
+    setcontext(&contextDispatcher);
+}
+void dispatch(){
+    int i;
+    for(i = 0 ; i < READY_QUEUES; i++) {
+        if(!FirstFila2(&readyQueue[i])) {
+            CPU = GetAtIteratorFila2(&readyQueue[i]);
+            DeleteAtIteratorFila2(&readyQueue[i]);        
+            setcontext(&CPU->context);
+        }
+    }
+    printf("fim do dispatch\n");
+}
+void initDispatcher() {
+    getcontext(&contextDispatcher);
+    contextDispatcher.uc_stack.ss_sp = (char *) malloc(stackLength);     
+    contextDispatcher.uc_stack.ss_size = stackLength;
+    contextDispatcher.uc_link = &mainContext;
+    makecontext(&contextDispatcher, (void (*)(void))dispatch, 0);    
+}
+
+void initTerminator() {
+    getcontext(&contextClear);
+    contextClear.uc_stack.ss_sp = (char *) malloc(stackLength);     
+    contextClear.uc_stack.ss_size = stackLength;
+    contextClear.uc_link = 0;
+    makecontext(&contextClear, (void (*)(void))terminate, 0);
+}
+
+int initQueues() {
+    int success = !CreateFila2(&blockedQueue) && !CreateFila2(&joinQueue), i;
+    for(i = 0 ; i < READY_QUEUES; i++)
+        success = success && !CreateFila2(&readyQueue[0]);    
+    return success;
+
+}
+int initMainThread() {
+    mainThread = (TCB_t *) malloc(sizeof(TCB_t));
+    mainThread->tid = 0;
+    mainThread->state = THREAD_EXEC;
+    mainThread->ticket = 0;
+    getcontext(&mainThread->context);
+    CPU = mainThread;
+}
+void init() {
+    initQueues();
+    initMainThread();
+    initTerminator();
+    initDispatcher();    
+}
+/***********************************************************
+********************* Cthread   ****************************
+
+**********************************************************/
 //------------------------------------------------------
 int ccreate (void* (*start)(void*), void *arg, int prio) {
     if(!initializedDeps) {        
@@ -121,7 +150,7 @@ int ccreate (void* (*start)(void*), void *arg, int prio) {
         initializedDeps = 1;
     }
 
-    if(prio>=0 || prio<=3) {
+    if(prio>=0 || prio<=3) {        
         ucontext_t context;
         getcontext(&context);
         context.uc_stack.ss_sp = (char *) malloc(stackLength);
@@ -197,9 +226,11 @@ int cjoin(int tid) {
                 break;
             }
         }
+        
         if(!found)
             return ERROR;
     }
+    
     //Then, check if the thread isn't being waited for
     if (searchJoinQueue(&joinQueue,tid) == SUCCESS)
         return ERROR;
@@ -256,7 +287,7 @@ int csignal(csem_t *sem) {
         init();
         initializedDeps = 1;
     }
-    
+
     if(!sem)
         return ERROR;
     sem->count++;
