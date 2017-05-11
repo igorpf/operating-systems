@@ -51,7 +51,7 @@ int searchJoinQueue(FILA2* queue, int tid) {
     JOIN *ptr;
     if(!FirstFila2(queue)) {
         ptr = GetAtIteratorFila2(queue);
-        printf("\nwaited: %d, waiting: %d\n", ptr->waitedTid, ptr->waitingTid);
+        // printf("\nwaited: %d, waiting: %d\n", ptr->waitedTid, ptr->waitingTid);
         if(tid == ptr->waitedTid) {
             return SUCCESS;
         } else {
@@ -88,7 +88,6 @@ void terminate() {
     free(CPU->context.uc_stack.ss_sp);
     free(CPU);
     CPU = NULL;
-    printf("terminate\n");
     setcontext(&contextDispatcher);
 }
 void dispatch(){
@@ -100,7 +99,7 @@ void dispatch(){
             setcontext(&CPU->context);
         }
     }
-    printf("fim do dispatch\n");
+    setcontext(&mainThread->context);
 }
 void initDispatcher() {
     getcontext(&contextDispatcher);
