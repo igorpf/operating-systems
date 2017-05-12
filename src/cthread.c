@@ -84,7 +84,7 @@ int generateId() {
 
 void terminate() {
     //TODO: verify join
-
+    // printf("Terminate\n");
     verifyJoinedThreads(CPU->tid);
     free(CPU->context.uc_stack.ss_sp);
     free(CPU);
@@ -255,7 +255,9 @@ int csem_init(csem_t *sem, int count) {
     }
     sem = (csem_t *) malloc(sizeof(csem_t));
     sem->count = count;
-    if(sem && !CreateFila2(sem->fila))
+    sem->fila = 0;
+    printf("Criando semaforo\n");
+    if(sem)
         return 0;
     else
         return ERROR;
@@ -272,8 +274,12 @@ int cwait(csem_t *sem) {
     sem->count--;
     
     if(sem->count < 0) {
-        if(!sem->fila && CreateFila2(sem->fila)) 
-            return ERROR;
+        if(!sem->fila) {
+            sem->fila = (FILA2 *) malloc(sizeof(FILA2));
+            if(CreateFila2(sem->fila))
+                return ERROR;
+        } 
+        // printf("Bloqueando alguem\n");
         CPU->state = THREAD_BLOC;    
         if(AppendFila2(&blockedQueue, (void *) CPU) || AppendFila2(sem->fila, (void *) CPU))
             return ERROR;
@@ -293,9 +299,13 @@ int csignal(csem_t *sem) {
         return ERROR;
     sem->count++;
     
+        // printf("Liberando alguém\n");
     if(sem->count <= 0) {
-        if(!sem->fila && CreateFila2(sem->fila)) 
-            return ERROR;
+        if(!sem->fila) {
+            sem->fila = (FILA2 *) malloc(sizeof(FILA2));
+            if(CreateFila2(sem->fila))
+                return ERROR;
+        } 
         if(!FirstFila2(sem->fila))
             return ERROR;
         TCB_t* freed = GetAtIteratorFila2(sem->fila);
