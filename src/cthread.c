@@ -76,6 +76,7 @@ int verifyJoinedThreads(int waitedTid) {
         AppendFila2(&readyQueue[freed->ticket], (void *)freed);    
         DeleteAtIteratorFila2(&blockedQueue);
     }
+    return 0;
 }
 int generateId() {
     return tid++;
@@ -131,6 +132,7 @@ int initMainThread() {
     mainThread->ticket = 0;
     getcontext(&mainThread->context);
     CPU = mainThread;
+    return 0;
 }
 void init() {
     initQueues();
