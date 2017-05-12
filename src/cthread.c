@@ -256,7 +256,7 @@ int csem_init(csem_t *sem, int count) {
     sem = (csem_t *) malloc(sizeof(csem_t));
     sem->count = count;
     sem->fila = 0;
-    printf("Criando semaforo\n");
+    // printf("Criando semaforo\n");
     if(sem)
         return 0;
     else
