@@ -74,9 +74,10 @@ int main(int argc, char *argv[ ]) {
     csem_init(&mutex, 1);
     csem_init(&vazio, N);
     csem_init(&cheio, 0);
+    printf("%d %d\n", mutex.count, vazio.count);
 
-    prod = ccreate((void *)produtor, (void *)NULL);
-    cons = ccreate((void *)consumidor, (void *)NULL);
+    prod = ccreate((void *)produtor, (void *)NULL, 0);
+    cons = ccreate((void *)consumidor, (void *)NULL, 0);
 
     cjoin(prod);
     cjoin(cons);

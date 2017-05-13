@@ -253,7 +253,6 @@ int csem_init(csem_t *sem, int count) {
         init();
         initializedDeps = 1;
     }
-    sem = (csem_t *) malloc(sizeof(csem_t));
     sem->count = count;
     sem->fila = 0;
     // printf("Criando semaforo\n");
@@ -279,13 +278,13 @@ int cwait(csem_t *sem) {
             if(CreateFila2(sem->fila))
                 return ERROR;
         } 
-        // printf("Bloqueando alguem\n");
         CPU->state = THREAD_BLOC;    
         if(AppendFila2(&blockedQueue, (void *) CPU) || AppendFila2(sem->fila, (void *) CPU))
             return ERROR;
 
         swapcontext(&CPU->context, &contextDispatcher);
     }
+
     return 0;
 }
 
