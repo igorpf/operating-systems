@@ -18,7 +18,9 @@ BIN_DIR=./bin
 SRC_DIR=./src
 CFLAGS = -Wall
 
-all: main lib
+all: clean directory lib
+directory:
+	mkdir lib -pv
 
 main: cthread.o
 	$(CC)  $(CFLAGS) -o $(BIN_DIR)/main $(BIN_DIR)/*.o

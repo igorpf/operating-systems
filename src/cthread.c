@@ -86,19 +86,24 @@ void terminate() {
     //TODO: verify join
     // printf("Terminate\n");
     verifyJoinedThreads(CPU->tid);
-    free(CPU->context.uc_stack.ss_sp);
-    free(CPU);
-    CPU = NULL;
+    if(CPU->tid != 0) { //cannot delete main thread
+        free(CPU->context.uc_stack.ss_sp);
+        free(CPU);
+        CPU = NULL;    
+    }
+    
     setcontext(&contextDispatcher);
 }
 void dispatch(){
     int i;
     for(i = 0 ; i < READY_QUEUES; i++) {
+        printf("Procurando na fila %d\n", i);
         if(!FirstFila2(&readyQueue[i])) {
             CPU = GetAtIteratorFila2(&readyQueue[i]);
             DeleteAtIteratorFila2(&readyQueue[i]);        
             setcontext(&CPU->context);
         }
+        printf("Não achou na fila %d\n", i);
     }
     setcontext(&mainThread->context);
 }
