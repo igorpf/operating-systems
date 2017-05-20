@@ -34,12 +34,16 @@ int tid=1, initializedDeps = 0;
 int searchTCBQueue(FILA2* queue, int tid) {
     TCB_t *ptr;
     if(!FirstFila2(queue)) {
-        ptr = GetAtIteratorFila2(queue);
+        ptr = (TCB_t *) GetAtIteratorFila2(queue);
+        // printf("Procurando tid %d e tem %d\n", tid,ptr->tid);
         if(tid == ptr->tid) {
             return SUCCESS;
         } else {
             while(!NextFila2(queue)) {
+                ptr = (TCB_t *) GetAtIteratorFila2(queue);
+                // printf("Procurando tid %d e tem %d\n", tid,ptr->tid);
                 if(tid == ptr->tid) {
+                    // printf("tid %d success\n", tid);
                     return SUCCESS;
                 }
             }
@@ -49,13 +53,17 @@ int searchTCBQueue(FILA2* queue, int tid) {
 }
 int searchJoinQueue(FILA2* queue, int tid) {
     JOIN *ptr;
+    // printf("searchJoinQueue for %d FirstFila2: %d\n", tid,FirstFila2(queue));
     if(!FirstFila2(queue)) {
-        ptr = GetAtIteratorFila2(queue);
+        ptr = (JOIN *) GetAtIteratorFila2(queue);
         // printf("\nwaited: %d, waiting: %d\n", ptr->waitedTid, ptr->waitingTid);
         if(tid == ptr->waitedTid) {
+            // printf("SUCCESS\n");
             return SUCCESS;
         } else {
             while(!NextFila2(queue)) {
+                ptr = (JOIN *) GetAtIteratorFila2(queue);
+                // printf("\nwaited: %d, waiting: %d\n", ptr->waitedTid, ptr->waitingTid);
                 if(tid == ptr->waitedTid) {
                     return SUCCESS;
                 }
@@ -65,17 +73,25 @@ int searchJoinQueue(FILA2* queue, int tid) {
     return ERROR;
 }
 int verifyJoinedThreads(int waitedTid) {
-    if(searchJoinQueue(&joinQueue, waitedTid) == SUCCESS && searchTCBQueue(&blockedQueue, waitedTid) == SUCCESS) {
-        JOIN* ptr = (JOIN*) GetAtIteratorFila2(&joinQueue);        
-        DeleteAtIteratorFila2(&joinQueue);
-        free(ptr);
-        ptr = NULL;
-        
-        TCB_t* freed = GetAtIteratorFila2(&blockedQueue);
-        freed->state = THREAD_RDY;
-        AppendFila2(&readyQueue[freed->ticket], (void *)freed);    
-        DeleteAtIteratorFila2(&blockedQueue);
+    // printf("verifyJoinedThreads %d\n", waitedTid);
+    if(searchJoinQueue(&joinQueue, waitedTid) == SUCCESS) {
+        JOIN* ptr = (JOIN *)GetAtIteratorFila2(&joinQueue);
+        if(searchTCBQueue(&blockedQueue, ptr->waitingTid) == SUCCESS) {
+            // printf("achou na fila bloq\n");
+            // printf("ptr: waited: %d waiting: %d\n", ptr->waitedTid, ptr->waitingTid);
+            DeleteAtIteratorFila2(&joinQueue);
+            free(ptr);
+            ptr = NULL;
+            
+            TCB_t* freed = GetAtIteratorFila2(&blockedQueue);
+            freed->state = THREAD_RDY;
+            // printf("freed: %d ticket %d\n", freed->tid, freed->ticket);
+            // printf("append: %d\n", );    
+            AppendFila2(&readyQueue[freed->ticket], (void *)freed);
+            DeleteAtIteratorFila2(&blockedQueue);
+        }
     }
+    // printf("terminou verify\n");
     return 0;
 }
 int generateId() {
@@ -84,7 +100,7 @@ int generateId() {
 
 void terminate() {
     //TODO: verify join
-    // printf("Terminate\n");
+    // printf("Terminate %d\n", CPU->tid);
     verifyJoinedThreads(CPU->tid);
     if(CPU->tid != 0) { //cannot delete main thread
         free(CPU->context.uc_stack.ss_sp);
@@ -96,16 +112,19 @@ void terminate() {
 }
 void dispatch(){
     int i;
+
     for(i = 0 ; i < READY_QUEUES; i++) {
-        printf("Procurando na fila %d\n", i);
+            // printf("dispatch %d %d\n", i,FirstFila2(&readyQueue[i]));
         if(!FirstFila2(&readyQueue[i])) {
-            CPU = GetAtIteratorFila2(&readyQueue[i]);
+            CPU = (TCB_t *) GetAtIteratorFila2(&readyQueue[i]);
             DeleteAtIteratorFila2(&readyQueue[i]);        
-            setcontext(&CPU->context);
+            break;
+            // setcontext(&CPU->context);
         }
-        printf("Não achou na fila %d\n", i);
     }
-    setcontext(&mainThread->context);
+    // printf("CPU: %d\n", CPU->tid);
+    setcontext(&CPU->context);
+    // setcontext(&mainThread->context);
 }
 void initDispatcher() {
     getcontext(&contextDispatcher);
@@ -225,6 +244,7 @@ int cyield(void) {
 int cjoin(int tid) {
     // First, check if the thread exists
     int i, found = 0;
+    // printf("CPU: %d, Tid:%d \n",CPU->tid, tid);
     if(searchTCBQueue(&blockedQueue, tid) == ERROR) {        
         for(i = 0; i < READY_QUEUES; i++) {            
             if(searchTCBQueue(&readyQueue[i], tid) == SUCCESS) {
@@ -232,20 +252,22 @@ int cjoin(int tid) {
                 break;
             }
         }
-        
+        // printf("Thread %d exists? %d\n", tid, found);
         if(!found)
             return ERROR;
     }
     
     //Then, check if the thread isn't being waited for
-    if (searchJoinQueue(&joinQueue,tid) == SUCCESS)
+    if (searchJoinQueue(&joinQueue,tid) == SUCCESS){
         return ERROR;
+    }
     //Block the current thread and send it to the joinQueue
     if (CPU) {
         CPU->state = THREAD_BLOC;
         JOIN *newJoinPair = (JOIN *) malloc(sizeof(JOIN));
         newJoinPair->waitedTid = tid;
         newJoinPair->waitingTid = CPU->tid;
+        // printf("waited: %d waiting %d\n", tid, CPU->tid);
         if(!AppendFila2(&blockedQueue, (void *) CPU) && !AppendFila2(&joinQueue, (void *) newJoinPair)) {            
             swapcontext(&CPU->context, &contextDispatcher); 
             return 0;    
@@ -284,9 +306,11 @@ int cwait(csem_t *sem) {
                 return ERROR;
         } 
         CPU->state = THREAD_BLOC;    
-        if(AppendFila2(&blockedQueue, (void *) CPU) || AppendFila2(sem->fila, (void *) CPU))
+        if(AppendFila2(&blockedQueue, (void *) CPU) || AppendFila2(sem->fila, (void *) CPU)){
+            // printf("erro no cwait\n");
             return ERROR;
-
+        }
+        // printf("First cwait %d %d\n", FirstFila2(&blockedQueue), FirstFila2(sem->fila));
         swapcontext(&CPU->context, &contextDispatcher);
     }
 
@@ -303,21 +327,29 @@ int csignal(csem_t *sem) {
         return ERROR;
     sem->count++;
     
-        // printf("Liberando alguém\n");
     if(sem->count <= 0) {
         if(!sem->fila) {
             sem->fila = (FILA2 *) malloc(sizeof(FILA2));
-            if(CreateFila2(sem->fila))
+            // printf("não tinha fila, criando\n");
+            if(CreateFila2(sem->fila)){
+                // printf("Erro ao criar fila\n");
                 return ERROR;
+            }
         } 
-        if(!FirstFila2(sem->fila))
+        if(FirstFila2(sem->fila)){
+            // printf("csignal sem ngm na fila\n");
             return ERROR;
+        }
         TCB_t* freed = GetAtIteratorFila2(sem->fila);
         freed->state = THREAD_RDY;
-        if(searchTCBQueue(&blockedQueue, freed->tid))
+        if(searchTCBQueue(&blockedQueue, freed->tid)!=SUCCESS){
+            // printf("Falhou csignal: %d, não achou na fila  de bloqueados\n", freed->tid);
             return ERROR;
+        }
         DeleteAtIteratorFila2(sem->fila);
         DeleteAtIteratorFila2(&blockedQueue);            
+        AppendFila2(&readyQueue[freed->ticket], (void*) freed);
+        // printf("Liberando do csignal: %d\n", freed->tid);
     }
     return 0;
 }

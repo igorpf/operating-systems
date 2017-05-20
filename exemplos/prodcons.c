@@ -18,7 +18,7 @@
 #include "../include/support.h"
 #include "../include/cthread.h"
 
-#define	N	10
+#define	N	2
 #define MAXPROD 100
 #define TRUE	1
 

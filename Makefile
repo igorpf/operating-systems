@@ -23,7 +23,7 @@ directory:
 	mkdir lib -pv
 
 main: cthread.o
-	$(CC)  $(CFLAGS) -o $(BIN_DIR)/main $(BIN_DIR)/*.o
+	$(CC)  $(CFLAGS) -o $(BIN_DIR)/main $(BIN_DIR)/*.o -g
 cthread.o: 
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/cthread.c -Wall -o $(BIN_DIR)/cthread.o 
 

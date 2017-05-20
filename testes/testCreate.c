@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
 
 	int	id0;//, id1, id2, id3, id4, id5, id6;
 	int i;
-	csem_init(&mutex, 1);
+	csem_init(&mutex, 0);
 	
 	id0 = ccreate(func0, (void *)&i,0);
 	cjoin(id0);
