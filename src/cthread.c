@@ -189,13 +189,15 @@ int ccreate (void* (*start)(void*), void *arg, int prio) {
         newTCB->context = context;
         newTCB->ticket = prio;
         AppendFila2(&readyQueue[prio], (void *) newTCB);
-        if(context.uc_stack.ss_sp && newTCB) //check if memory was correctly allocated
+        if(context.uc_stack.ss_sp && newTCB) {
+            // printf("deu certo %d\n", newTCB->tid);    
             return newTCB->tid;
-        
+        } //check if memory was correctly allocated
         free(context.uc_stack.ss_sp);
         free(newTCB);       
         return ERROR;
     }//invalid priority
+
     return ERROR;
 }
 int csetprio(int tid, int prio) {

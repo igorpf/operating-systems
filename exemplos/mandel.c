@@ -44,7 +44,7 @@ void*   mandel(void *arg) {
     double dx, dy, z_r, z_i, c_r, c_i, c0_r, c0_i, c1_r, c1_i, aux;
     int i, j, k, lim, n, t, tid, yi, yf;
     int *plan;
-
+    // printf("Mandela\n");
 
     /* Faz uma copia da regiao global para manter em memoria local */
 
@@ -133,7 +133,6 @@ int main(int argc, char **argv) {
          }
     }
 
-
     workload = (struct work *) malloc(t * sizeof(struct work));
     if (workload == NULL)
        error("ERRO: Alocacao de memória para workload");
@@ -141,6 +140,7 @@ int main(int argc, char **argv) {
     workers = (int *)malloc(t * sizeof(int));
     if (workers == NULL)
        error("ERRO: Alocacao de memória para workers");
+
 
     for (i=0; i< t; i++) {
         workload[i].c0_r = c0_r;
@@ -156,13 +156,13 @@ int main(int argc, char **argv) {
 
     for (i=0; i<t; i++) {
         workers[i] = ccreate(mandel, (void *)(&workload[i]),0);
-        printf("\n");
         if (workers[i] == -1) 
            error("ERRO: Problema na criacao de thread worker\n");
     }
 
-    for (i=0; i<t; i++) 
+    for (i=0; i<t; i++) {
         cjoin(workers[i]);
+    }
 
     /*
      * Geração de um arquivo ppm com a figura do fractal. P3 é um número
@@ -175,6 +175,7 @@ int main(int argc, char **argv) {
        printf("Gerando arquivo mandel.ppm...\n");
        fprintf(fp, "P3 %d %d 3\n", n, n);
        for (i=0; i< t; i++) {
+        printf("i: %d\n", i);
            for( r= 0; r < n*n/t; r++)
              fprintf(fp, "%d %d %d \n", (workload[i].region[r]>>5) & 6,
                                         (workload[i].region[r]>>3)& 7,

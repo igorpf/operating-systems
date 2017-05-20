@@ -1,15 +1,15 @@
 CC=gcc
 LIB_DIR=../lib
-FLAGS=-Wall -o
+FLAGS=-Wall -o 
 LIB=-lcthread
 
-all: clean ccreate cyield cjoin csem cidentify
+all: clean ccreate cyield cjoin csem cidentify csetprio
 
 ccreate:
 	$(CC) $(FLAGS) ccreate testCreate.c -L$(LIB_DIR) $(LIB)
 
 cyield:
-	$(CC) $(FLAGS) cyield testYield.c -L$(LIB_DIR) $(LIB)
+	$(CC) $(FLAGS) cyield testYield.c -L$(LIB_DIR) $(LIB) 
 
 cjoin:
 	$(CC) $(FLAGS) cjoin testJoin.c -L$(LIB_DIR) $(LIB)
@@ -19,6 +19,8 @@ csem:
 
 cidentify:
 	$(CC) $(FLAGS) cidentify testIdentify.c -L$(LIB_DIR) $(LIB)
+csetprio:
+	$(CC) $(FLAGS) csetprio testSetPrio.c -L$(LIB_DIR) $(LIB)
 
 
 clean:

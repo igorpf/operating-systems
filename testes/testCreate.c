@@ -7,20 +7,17 @@
 #include <string.h>
 #include "../include/support.h"
 #include "../include/cthread.h"
-csem_t          mutex;
+
 void* func0(void *arg) {
-	printf("Antes de esperar mutex\n");
-	cwait(&mutex);
-	printf("Depois de esperar mutex\n");
-	return;
+	printf("Estou estou na func0 printando %d\n", (int)*((int*)arg));
+	return arg;
 }
 
 
 int main(int argc, char *argv[]) {
 
-	int	id0;//, id1, id2, id3, id4, id5, id6;
-	int i;
-	csem_init(&mutex, 0);
+	int	id0;
+	int i=9;
 	
 	id0 = ccreate(func0, (void *)&i,0);
 	cjoin(id0);
