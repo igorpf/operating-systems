@@ -263,10 +263,7 @@ int csem_init(csem_t *sem, int count) {
     }
     sem->count = count;
     sem->fila = 0;
-    if(sem)
-        return 0;
-    else
-        return ERROR;
+    return sem? 0:ERROR;
 }
 
 int cwait(csem_t *sem) {

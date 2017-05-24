@@ -30,11 +30,7 @@ prodcons: prodcons.c $(LIB_DIR)/libcthread.a
 series: series.c $(LIB_DIR)/libcthread.a
 	$(CC) -o series series.c -L$(LIB_DIR) -lcthread -lm -Wall
 
-novoTeste:	novoTeste.c $(LIB_DIR)/libcthread.a
-	$(CC) -o novoTeste novoTeste.c -L$(LIB_DIR) -lcthread -lm -Wall
 
-novoTeste_1:	novoTeste_1.c $(LIB_DIR)/libcthread.a
-	$(CC) -o novoTeste_1 novoTeste_1.c -L$(LIB_DIR) -lcthread -lm -Wall
 	
 clean:
 	rm -rf exemplo novoTeste novoTeste_1 mandel teste_vetor barbeiro filosofos prodcons series *.o *~
