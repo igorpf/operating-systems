@@ -18,7 +18,7 @@ BIN_DIR=./bin
 SRC_DIR=./src
 CFLAGS = -Wall
 
-all: clean directory lib
+all: directory clean lib
 directory:
 	mkdir lib -pv
 
